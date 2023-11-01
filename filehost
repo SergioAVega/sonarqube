@@ -5,6 +5,7 @@ pipeline {
         // Define environment variables if needed
         DOTNET_ROOT = tool name: 'dotnet', type: 'Tool'
         PATH = "$DOTNET_ROOT:$PATH"
+        SONARQUBE_SCANNER_HOME = tool name: 'SonarQube Scanner', type: 'Tool'
     }
 
     stages {
@@ -15,44 +16,22 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Build and Test') {
             steps {
-                // Restore, build, and publish the .NET project
+                // Restore, build, and test the .NET project
                 script {
                     sh 'dotnet restore'
                     sh 'dotnet build -c Release'
-                }
-            }
-        }
-
-        stage('Test') {
-            steps {
-                // Run tests (e.g., MSTest, NUnit, xUnit)
-                script {
                     sh 'dotnet test --no-restore --no-build'
                 }
             }
         }
 
-        stage('Publish Artifacts') {
+        stage('SonarQube Analysis') {
             steps {
-                // Publish the build artifacts (e.g., DLLs, executables)
+                // Execute SonarQube scanner to analyze the project
                 script {
-                    sh 'dotnet publish -c Release -o ./publish'
-                }
-                archiveArtifacts artifacts: 'publish/**/*', allowEmptyArchive: true
-            }
-        }
-
-        stage('Deploy') {
-            when {
-                // Define conditions to deploy (e.g., only on the master branch)
-                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
-            }
-            steps {
-                // Deploy your application (e.g., to a web server)
-                script {
-                    // Add deployment steps as needed
+                    sh "${SONARQUBE_SCANNER_HOME}/bin/sonar-scanner"
                 }
             }
         }
