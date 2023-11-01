@@ -1,0 +1,76 @@
+pipeline {
+    agent any
+
+    environment {
+        // Define environment variables if needed
+        DOTNET_ROOT = tool name: 'dotnet', type: 'Tool'
+        PATH = "$DOTNET_ROOT:$PATH"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Check out your source code from your version control system (e.g., Git)
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                // Restore, build, and publish the .NET project
+                script {
+                    sh 'dotnet restore'
+                    sh 'dotnet build -c Release'
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                // Run tests (e.g., MSTest, NUnit, xUnit)
+                script {
+                    sh 'dotnet test --no-restore --no-build'
+                }
+            }
+        }
+
+        stage('Publish Artifacts') {
+            steps {
+                // Publish the build artifacts (e.g., DLLs, executables)
+                script {
+                    sh 'dotnet publish -c Release -o ./publish'
+                }
+                archiveArtifacts artifacts: 'publish/**/*', allowEmptyArchive: true
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                // Define conditions to deploy (e.g., only on the master branch)
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
+            steps {
+                // Deploy your application (e.g., to a web server)
+                script {
+                    // Add deployment steps as needed
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            // Define actions to take on pipeline failure
+            emailext(
+                subject: "Pipeline Failed: ${currentBuild.fullDisplayName}",
+                body: "The Jenkins pipeline for the .NET project failed. Please investigate.",
+                recipientProviders: [culprits()]
+            )
+        }
+
+        success {
+            // Define actions to take on pipeline success
+            echo "Pipeline succeeded!"
+        }
+    }
+}
