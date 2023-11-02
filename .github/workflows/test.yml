@@ -1,25 +1,37 @@
+name: SonarQube Scan
+
 on:
-  # Trigger analysis when pushing in master or pull requests, and when creating
-  # a pull request. 
   push:
     branches:
-      - master
+      - master  # Customize the branch as needed
 
-name: SonarQube Scan
 jobs:
   sonarqube:
-    name: SonarQube Trigger
-    runs-on: self-hosted
+    runs-on: self-hosted  # You can choose an appropriate runner
+
     steps:
-    - name: Checking out
-      uses: actions/checkout@master
-      with:
-        # Disabling shallow clone is recommended for improving relevancy of reporting
-        fetch-depth: 0
-    - name: SonarQube Scan
-      uses: kitabisa/sonarqube-action@v1.2.0
-      with:
-        host: "http://localhost:9000"
-        login: "sqp_6b0fa1f8148a3bf65734c5b71fbf9837165e6187"
-        projectBaseDir: "sonarqube-scanner-msbuild/CSharpProject"
-        projectKey: "sonarqube-scanner-msbuild/CSharpProject"
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      #- name: Set up .NET Core
+       # uses: actions/setup-dotnet@v1
+        #with:
+         # dotnet-version: 5.x  # Change to the version you need
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build the project
+        run: dotnet build
+
+      - name: Run SonarQube Analysis
+        run: dotnet sonarscanner begin /k:"Tech-Debt-Demo" /d:sonar.host.url="http://localhost:9000" /d:sonar.login=$SONARQUBE_TOKEN
+        env:
+          SONARQUBE_TOKEN: 'sqp_6b0fa1f8148a3bf65734c5b71fbf9837165e6187'
+
+      - name: Build and analyze
+        run: dotnet build /t:Rebuild
+        continue-on-error: true
+
+      - name: End SonarQube Analysis
+        run: dotnet sonarscanner end /d:sonar.login=$SONARQUBE_TOKEN
